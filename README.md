@@ -15,6 +15,8 @@ ProducerApp ──> ventas-raw ──> Kafka Streams (Java) ──> ventas-agreg
 - Diagrama de flujo: [docs/arquitectura.mmd](docs/arquitectura.mmd) · Despliegue: [docs/infraestructura.mmd](docs/infraestructura.mmd)
 - Informe y matriz de escenarios: [docs/INFORME.md](docs/INFORME.md)
 - Guía para ejecutar y defender cada prueba: [docs/GUIA_PRUEBAS.md](docs/GUIA_PRUEBAS.md)
+- Comandos explicados: [docs/COMANDOS.md](docs/COMANDOS.md) · Bitácora de trabajo: [docs/BITACORA.md](docs/BITACORA.md)
+- Documentos Word: [documentos/](documentos/)
 - Evidencias (salida real de cada comando): [docs/evidencias/txt/](docs/evidencias/txt/)
 
 ---

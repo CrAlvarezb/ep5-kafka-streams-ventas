@@ -1,0 +1,6 @@
+{
+  "name": "ep5-docgen",
+  "private": true,
+  "description": "Genera los Word de documentos/ desde los Markdown de docs/",
+  "dependencies": { "docx": "9.1.1" }
+}
