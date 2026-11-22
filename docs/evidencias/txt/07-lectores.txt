@@ -1,0 +1,14 @@
+$ ./verificar.sh lectores
+--- lector-ventas-raw
+TOPIC=ventas-raw PARTICION=2 OFFSET=219 KEY=T08 VALOR={"eventId":"4698e48f-755a-4f03-90e1-9ba57db7d712","tiendaId":"T08","tiendaNombre":"App Movil","eventTime":"2026-11-22T17:35:03.898258049Z","clienteId":"cliente-0070","producto":"Audifonos","categoria":"tecn
+TOPIC=ventas-raw PARTICION=2 OFFSET=220 KEY=T08 VALOR={"eventId":"f552d290-4487-4ce8-91f2-f7a572e27da9","tiendaId":"T08","tiendaNombre":"App Movil","eventTime":"2026-11-22T17:35:04.398759494Z","clienteId":"cliente-0066","producto":"Cafe 250 g","categoria":"sup
+--- lector-ventas-agregadas
+TOPIC=ventas-agregadas PARTICION=1 OFFSET=32 KEY=T03 VALOR={"tiendaId":"T03","windowStart":"2026-11-22T17:33:00Z","windowEnd":"2026-11-22T17:34:00Z","cantidadVentas":13,"unidades":34,"montoTotal":739900,"ticketPromedio":56915,"primerEvento":"2026-11-22T17:33:0
+% Reached end of topic ventas-agregadas [1] at offset 34
+--- lector-ventas-dlq
+% Reached end of topic ventas-raw-dlq [1] at offset 0
+% Reached end of topic ventas-raw-dlq [0] at offset 0
+--- lector-ventas-descartadas
+% Reached end of topic ventas-descartadas [1] at offset 0
+% Reached end of topic ventas-descartadas [0] at offset 0
+

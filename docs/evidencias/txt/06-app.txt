@@ -1,0 +1,20 @@
+$ ./verificar.sh app
+== Contenedores de la app
+NAME                    IMAGE                  STATUS                   PORTS
+api-usuarios            api-usuarios:local     Up 2 minutes (healthy)   0.0.0.0:8081->8081/tcp, [::]:8081->8081/tcp
+grafana-alloy           grafana/alloy:v1.5.1   Up 10 minutes            
+ventas-app-producer-1   ventas-app:local       Up 2 minutes             0.0.0.0:9406->9406/tcp, [::]:9406->9406/tcp
+ventas-app-streams-1    ventas-app:local       Up 2 minutes             0.0.0.0:9408->9407/tcp, [::]:9408->9407/tcp
+
+== Ultimas ventas del producer (key = tiendaId)
+2026-11-22T17:34:51.886Z INFO  ProducerApp - ENVIADA key=T05 particion=1 offset=96 eventId=34881e4e-e06d-46e4-a3dd-6806091b1189 total=6360 n=336
+2026-11-22T17:34:52.384Z INFO  ProducerApp - ENVIADA key=T07 particion=0 offset=312 eventId=86ab5e0d-c3c2-4df1-851b-58a21555460a total=1670 n=337
+2026-11-22T17:34:52.886Z INFO  ProducerApp - ENVIADA key=T06 particion=0 offset=313 eventId=17724731-fc50-4a5d-9ecc-ea2618e8c43e total=16720 n=338
+2026-11-22T17:34:53.385Z INFO  ProducerApp - ENVIADA key=T07 particion=0 offset=314 eventId=8bf27566-ad63-4403-a024-83c95264b0d7 total=25080 n=339
+2026-11-22T17:34:53.894Z INFO  ProducerApp - ENVIADA key=T04 particion=0 offset=315 eventId=340c8aaf-418e-4d12-8255-52a63c22d75b total=28020 n=340
+
+== Configuracion y estado de Kafka Streams
+2026-11-22T17:32:02.348Z INFO  StreamsApp - Configuracion: ventana=60 s, gracia=30 s, retencion dedup=600 s, futuro max=300 s, topics raw=ventas-raw agregados=ventas-agregadas dlq=ventas-raw-dlq descartes=ventas-descartadas, RF=2, threads=1
+2026-11-22T17:32:04.437Z INFO  StreamsApp - Kafka Streams: CREATED -> REBALANCING
+2026-11-22T17:32:06.520Z INFO  StreamsApp - Kafka Streams: REBALANCING -> RUNNING
+

@@ -1,0 +1,5 @@
+# Normalmente no necesitas este archivo: ./verificar.sh desplegar pasa allowed_cidr (tu IP) y bucket.
+# Si ejecutas terraform a mano: copia a terraform.tfvars (ignorado por git) y ajusta.
+region       = "us-east-1"
+allowed_cidr = "203.0.113.10/32"
+bucket       = "ep5-kafka-deploy-<id-de-tu-cuenta>"

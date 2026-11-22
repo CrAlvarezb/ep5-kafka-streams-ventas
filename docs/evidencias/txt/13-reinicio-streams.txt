@@ -1,0 +1,57 @@
+$ ./verificar.sh reinicio-streams
+
+==== 1) ANTES: offsets confirmados del grupo ventas-aggregator ====
+[17:41:54 UTC]
+GROUP             TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                
+ventas-aggregator ventas-raw      0          637             638             1               ventas-aggregator-5fad0f95-
+ventas-aggregator ventas-raw      1          208             208             0               ventas-aggregator-5fad0f95-
+ventas-aggregator ventas-raw      2          427             427             0               ventas-aggregator-5fad0f95-
+ventas-aggregator ventas-raw      3          414             414             0               ventas-aggregator-5fad0f95-
+
+
+==== 2) Se envia una venta con eventId=reinicio-174154 ====
+  reinicio                     -> ventas-raw-1@213 key=T-DEMO | esperado: 1.a vez: se suma; 2.a vez: DUPLICADO (aunque Streams se reinicie)
+                                  valor: {"eventId":"reinicio-174154","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:42:18.688755247Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"presencial","me...
+
+... esperando 10s 
+
+==== 3) Se ELIMINA el contenedor de Kafka Streams (se pierde su RocksDB local) y se crea uno nuevo ====
+[17:42:35 UTC]
+Going to remove ventas-app-streams-1
+ Container ventas-app-streams-1  Removing
+ Container ventas-app-streams-1  Removed
+ Container ventas-app-streams-1  Starting
+ Container ventas-app-streams-1  Started
+2026-11-22T17:42:41.563Z INFO  StreamsApp - Kafka Streams: CREATED -> REBALANCING
+2026-11-22T17:43:23.902Z INFO  StreamsApp - RESTAURACION fin store=ventas-por-tienda changelog=ventas-aggregator-ventas-por-tienda-changelog-1 registros restaurados=193
+2026-11-22T17:43:23.908Z INFO  StreamsApp - RESTAURACION fin store=cierre-ventana-store changelog=ventas-aggregator-cierre-ventana-store-changelog-1 registros restaurados=209
+2026-11-22T17:43:24.012Z INFO  StreamsApp - RESTAURACION fin store=dedup-event-id changelog=ventas-aggregator-dedup-event-id-changelog-1 registros restaurados=215
+2026-11-22T17:43:24.320Z INFO  StreamsApp - RESTAURACION fin store=ventas-por-tienda changelog=ventas-aggregator-ventas-por-tienda-changelog-2 registros restaurados=408
+2026-11-22T17:43:24.459Z INFO  StreamsApp - RESTAURACION fin store=ventas-por-tienda changelog=ventas-aggregator-ventas-por-tienda-changelog-3 registros restaurados=406
+2026-11-22T17:43:24.493Z INFO  StreamsApp - RESTAURACION fin store=cierre-ventana-store changelog=ventas-aggregator-cierre-ventana-store-changelog-3 registros restaurados=433
+2026-11-22T17:43:24.634Z INFO  StreamsApp - RESTAURACION fin store=ventas-por-tienda changelog=ventas-aggregator-ventas-por-tienda-changelog-0 registros restaurados=612
+2026-11-22T17:43:24.651Z INFO  StreamsApp - RESTAURACION fin store=cierre-ventana-store changelog=ventas-aggregator-cierre-ventana-store-changelog-0 registros restaurados=652
+2026-11-22T17:43:24.654Z INFO  StreamsApp - RESTAURACION fin store=cierre-ventana-store changelog=ventas-aggregator-cierre-ventana-store-changelog-2 registros restaurados=434
+2026-11-22T17:43:24.802Z INFO  StreamsApp - RESTAURACION fin store=dedup-event-id changelog=ventas-aggregator-dedup-event-id-changelog-0 registros restaurados=659
+2026-11-22T17:43:24.967Z INFO  StreamsApp - RESTAURACION fin store=dedup-event-id changelog=ventas-aggregator-dedup-event-id-changelog-2 registros restaurados=441
+2026-11-22T17:43:25.068Z INFO  StreamsApp - RESTAURACION fin store=dedup-event-id changelog=ventas-aggregator-dedup-event-id-changelog-3 registros restaurados=438
+2026-11-22T17:43:25.233Z INFO  StreamsApp - Kafka Streams: REBALANCING -> RUNNING
+registros restaurados en total: 5100
+
+
+==== 4) Se REENVIA la misma venta: el store dedup-event-id restaurado la reconoce ====
+  reinicio                     -> ventas-raw-1@232 key=T-DEMO | esperado: 1.a vez: se suma; 2.a vez: DUPLICADO (aunque Streams se reinicie)
+                                  valor: {"eventId":"reinicio-174154","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:43:36.183551465Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"presencial","me...
+
+... esperando 10s 
+DUPLICADO reinicio-174154 - eventId ya aceptado en ventas-raw-1@213
+
+
+==== 5) DESPUES: retoma desde los offsets confirmados (lag vuelve a 0) ====
+[17:44:03 UTC]
+GROUP             TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                
+ventas-aggregator ventas-raw      0          738             738             0               ventas-aggregator-99518bf1-
+ventas-aggregator ventas-raw      1          246             246             0               ventas-aggregator-99518bf1-
+ventas-aggregator ventas-raw      2          477             477             0               ventas-aggregator-99518bf1-
+ventas-aggregator ventas-raw      3          500             500             0               ventas-aggregator-99518bf1-
+

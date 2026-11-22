@@ -1,0 +1,67 @@
+$ ./verificar.sh fallo
+
+==== ANTES: ISR completo (Isr: 1,2) y lag ====
+[17:39:20 UTC]
+Topic: ventas-raw	TopicId: KtloGT1ST9ej3l6FEcph-w	PartitionCount: 4	ReplicationFactor: 2	Configs: min.insync.replicas=1,cleanup.policy=delete,retention.ms=604800000,unclean.leader.election.enable=false
+	Topic: ventas-raw	Partition: 0	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw	Partition: 1	Leader: 2	Replicas: 2,1	Isr: 1,2
+	Topic: ventas-raw	Partition: 2	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw	Partition: 3	Leader: 2	Replicas: 2,1	Isr: 1,2
+
+Particiones sub-replicadas (todos los topics): 0
+offset final ventas-raw (suma de particiones): 1379
+lag de ventas-aggregator en ventas-raw: 0
+
+
+==== Deteniendo el broker 2 (kafka-2) con produccion en curso ====
+[17:39:38 UTC]
+kafka
+
+... esperando 20s a que el controlador saque al broker 2 del ISR
+
+==== DURANTE: ISR degradado (Isr: 1) y lideres movidos al broker 1 ====
+[17:40:08 UTC]
+Topic: ventas-raw	TopicId: KtloGT1ST9ej3l6FEcph-w	PartitionCount: 4	ReplicationFactor: 2	Configs: min.insync.replicas=1,cleanup.policy=delete,retention.ms=604800000,unclean.leader.election.enable=false
+	Topic: ventas-raw	Partition: 0	Leader: 1	Replicas: 1,2	Isr: 1
+	Topic: ventas-raw	Partition: 1	Leader: 1	Replicas: 2,1	Isr: 1
+	Topic: ventas-raw	Partition: 2	Leader: 1	Replicas: 1,2	Isr: 1
+	Topic: ventas-raw	Partition: 3	Leader: 1	Replicas: 2,1	Isr: 1
+
+Particiones sub-replicadas (todos los topics): 124
+offset final ventas-raw (suma de particiones): 1476
+
+... esperando 15s 
+
+==== DURANTE (+15 s): el offset sigue creciendo = el productor escribe con acks=all y min.insync.replicas=1 ====
+[17:40:38 UTC]
+offset final ventas-raw (suma de particiones): 1527
+lag de ventas-aggregator en ventas-raw: 0
+
+
+==== DURANTE: producer y Kafka Streams siguen arriba ====
+producer  Up 8 minutes
+streams  Up 8 minutes
+2026-11-22T17:40:53.774Z INFO  ProducerApp - ENVIADA key=T08 particion=2 offset=386 eventId=39eeda96-bcf9-470f-8241-d5c4196affcc total=1240 n=1059
+2026-11-22T17:40:54.276Z INFO  ProducerApp - ENVIADA key=T03 particion=3 offset=382 eventId=befec81a-d164-4651-ab5f-c7338ca2c9c6 total=54360 n=1060
+errores en Kafka Streams durante la caida: 0
+errores de envio del productor durante la caida: 0
+
+
+==== Reiniciando el broker 2 ====
+[17:41:01 UTC]
+kafka
+
+
+==== DESPUES: el broker 2 se pone al dia y vuelve al ISR (Isr: 1,2) ====
+[17:41:23 UTC]
+Topic: ventas-raw	TopicId: KtloGT1ST9ej3l6FEcph-w	PartitionCount: 4	ReplicationFactor: 2	Configs: min.insync.replicas=1,cleanup.policy=delete,retention.ms=604800000,unclean.leader.election.enable=false
+	Topic: ventas-raw	Partition: 0	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw	Partition: 1	Leader: 1	Replicas: 2,1	Isr: 1,2
+	Topic: ventas-raw	Partition: 2	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw	Partition: 3	Leader: 1	Replicas: 2,1	Isr: 1,2
+
+Particiones sub-replicadas (todos los topics): 0
+offset final ventas-raw (suma de particiones): 1619
+lag de ventas-aggregator en ventas-raw: 0
+Nota: los lideres vuelven a repartirse con auto.leader.rebalance.enable (cada 300 s) o con kafka-leader-election --election-type preferred.
+

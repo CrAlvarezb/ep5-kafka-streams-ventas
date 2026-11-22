@@ -1,0 +1,97 @@
+$ ./verificar.sh inspeccionar
+
+==== Topics, internos de Kafka Streams, sub-replicadas y consumer groups (offset, fin, lag, asignacion) ====
+
+== Brokers del cluster (deben aparecer id: 1 e id: 2)
+10.20.1.10:9092 (id: 1 rack: null)
+10.20.2.10:9092 (id: 2 rack: null)
+
+== ventas-raw: particiones, lider, replicas e ISR
+Topic: ventas-raw	TopicId: KtloGT1ST9ej3l6FEcph-w	PartitionCount: 4	ReplicationFactor: 2	Configs: min.insync.replicas=1,cleanup.policy=delete,retention.ms=604800000,unclean.leader.election.enable=false
+	Topic: ventas-raw	Partition: 0	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw	Partition: 1	Leader: 2	Replicas: 2,1	Isr: 1,2
+	Topic: ventas-raw	Partition: 2	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw	Partition: 3	Leader: 2	Replicas: 2,1	Isr: 1,2
+-- configuracion explicita del topic
+   cleanup.policy=delete
+   min.insync.replicas=1
+   retention.ms=604800000
+   unclean.leader.election.enable=false
+
+== ventas-agregadas: particiones, lider, replicas e ISR
+Topic: ventas-agregadas	TopicId: 1GhJ3Mx1TGuQZ5B51Em0sw	PartitionCount: 2	ReplicationFactor: 2	Configs: min.insync.replicas=1,cleanup.policy=delete,retention.ms=2592000000,unclean.leader.election.enable=false
+	Topic: ventas-agregadas	Partition: 0	Leader: 2	Replicas: 2,1	Isr: 1,2
+	Topic: ventas-agregadas	Partition: 1	Leader: 1	Replicas: 1,2	Isr: 1,2
+-- configuracion explicita del topic
+   cleanup.policy=delete
+   min.insync.replicas=1
+   retention.ms=2592000000
+   unclean.leader.election.enable=false
+
+== ventas-raw-dlq: particiones, lider, replicas e ISR
+Topic: ventas-raw-dlq	TopicId: Mwhfm4wNTVS_eV0Pe9kc7Q	PartitionCount: 4	ReplicationFactor: 2	Configs: min.insync.replicas=1,cleanup.policy=delete,retention.ms=1209600000,unclean.leader.election.enable=false
+	Topic: ventas-raw-dlq	Partition: 0	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw-dlq	Partition: 1	Leader: 2	Replicas: 2,1	Isr: 1,2
+	Topic: ventas-raw-dlq	Partition: 2	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw-dlq	Partition: 3	Leader: 2	Replicas: 2,1	Isr: 1,2
+-- configuracion explicita del topic
+   cleanup.policy=delete
+   min.insync.replicas=1
+   retention.ms=1209600000
+   unclean.leader.election.enable=false
+
+== ventas-descartadas: particiones, lider, replicas e ISR
+Topic: ventas-descartadas	TopicId: 4bvM8X7iTHK9pTb4FiyfDQ	PartitionCount: 2	ReplicationFactor: 2	Configs: min.insync.replicas=1,cleanup.policy=delete,retention.ms=1209600000,unclean.leader.election.enable=false
+	Topic: ventas-descartadas	Partition: 0	Leader: 2	Replicas: 2,1	Isr: 1,2
+	Topic: ventas-descartadas	Partition: 1	Leader: 1	Replicas: 1,2	Isr: 1,2
+-- configuracion explicita del topic
+   cleanup.policy=delete
+   min.insync.replicas=1
+   retention.ms=1209600000
+   unclean.leader.election.enable=false
+
+== Topics internos de Kafka Streams (repartition / changelog)
+   ventas-aggregator-ventas-por-tienda-changelog                  particiones=4 RF=2
+   ventas-aggregator-cierre-ventana-store-changelog               particiones=4 RF=2
+   ventas-aggregator-dedup-event-id-changelog                     particiones=4 RF=2
+
+== Particiones sub-replicadas (vacio = todas con ISR completo)
+
+== Consumer groups
+demo-logs-ventas-agregadas
+demo-logs-ventas-descartadas
+demo-logs-ventas-dlq
+demo-logs-ventas-raw
+ventas-aggregator
+
+== Grupo demo-logs-ventas-agregadas: offset confirmado, offset final, lag y consumidor asignado por particion
+TOPIC                                            PART     OFFSET        FIN    LAG  CONSUMER-ID
+ventas-agregadas                                 0           138        141      3  rdkafka-1b294f88-dad4-44c1-8e7e-f9d903c9da06
+ventas-agregadas                                 1           104        106      2  rdkafka-1b294f88-dad4-44c1-8e7e-f9d903c9da06
+
+== Grupo demo-logs-ventas-descartadas: offset confirmado, offset final, lag y consumidor asignado por particion
+TOPIC                                            PART     OFFSET        FIN    LAG  CONSUMER-ID
+ventas-descartadas                               0             -          0      -  rdkafka-7e8eadfb-77fd-466f-b5da-276e474d6dc5
+ventas-descartadas                               1             6          6      0  rdkafka-7e8eadfb-77fd-466f-b5da-276e474d6dc5
+
+== Grupo demo-logs-ventas-dlq: offset confirmado, offset final, lag y consumidor asignado por particion
+TOPIC                                            PART     OFFSET        FIN    LAG  CONSUMER-ID
+ventas-raw-dlq                                   0             -          0      -  rdkafka-b0430489-3518-4c13-89dc-d42b7bf57011
+ventas-raw-dlq                                   1            10         10      0  rdkafka-b0430489-3518-4c13-89dc-d42b7bf57011
+ventas-raw-dlq                                   2             -          0      -  rdkafka-b0430489-3518-4c13-89dc-d42b7bf57011
+ventas-raw-dlq                                   3             -          0      -  rdkafka-b0430489-3518-4c13-89dc-d42b7bf57011
+
+== Grupo demo-logs-ventas-raw: offset confirmado, offset final, lag y consumidor asignado por particion
+TOPIC                                            PART     OFFSET        FIN    LAG  CONSUMER-ID
+ventas-raw                                       0           937        939      2  rdkafka-17bf3d1e-f7c2-4b8e-90f1-b6d9734ca4f2
+ventas-raw                                       1           301        303      2  rdkafka-17bf3d1e-f7c2-4b8e-90f1-b6d9734ca4f2
+ventas-raw                                       2           617        619      2  rdkafka-17bf3d1e-f7c2-4b8e-90f1-b6d9734ca4f2
+ventas-raw                                       3           621        623      2  rdkafka-17bf3d1e-f7c2-4b8e-90f1-b6d9734ca4f2
+
+== Grupo ventas-aggregator: offset confirmado, offset final, lag y consumidor asignado por particion
+TOPIC                                            PART     OFFSET        FIN    LAG  CONSUMER-ID
+ventas-raw                                       0           941        941      0  ventas-aggregator-99518bf1-7722-48f1-9833-4542698034bf-StreamThread-1-consumer-2d940fae-c3be-4684-a3de-c71a609db441
+ventas-raw                                       1           304        304      0  ventas-aggregator-99518bf1-7722-48f1-9833-4542698034bf-StreamThread-1-consumer-2d940fae-c3be-4684-a3de-c71a609db441
+ventas-raw                                       2           620        620      0  ventas-aggregator-99518bf1-7722-48f1-9833-4542698034bf-StreamThread-1-consumer-2d940fae-c3be-4684-a3de-c71a609db441
+ventas-raw                                       3           623        623      0  ventas-aggregator-99518bf1-7722-48f1-9833-4542698034bf-StreamThread-1-consumer-2d940fae-c3be-4684-a3de-c71a609db441
+

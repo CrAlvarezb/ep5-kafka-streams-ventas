@@ -1,0 +1,5 @@
+# Saltos de linea LF en todo el repo: los .sh, .tf y .yml se ejecutan en Linux (EC2) y en Git Bash
+* text=auto eol=lf
+*.docx binary
+*.png binary
+*.jpg binary

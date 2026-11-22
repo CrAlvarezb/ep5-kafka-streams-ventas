@@ -1,0 +1,28 @@
+$ ./verificar.sh kafka
+== Brokers registrados en ZooKeeper (deben ser [1, 2])
+[1, 2]
+
+== Brokers y su endpoint anunciado
+10.20.1.10:9092 (id: 1 rack: null)
+10.20.2.10:9092 (id: 2 rack: null)
+
+== Topics
+__consumer_offsets
+__transaction_state
+ventas-aggregator-cierre-ventana-store-changelog
+ventas-aggregator-dedup-event-id-changelog
+ventas-aggregator-ventas-por-tienda-changelog
+ventas-agregadas
+ventas-descartadas
+ventas-raw
+ventas-raw-dlq
+
+== ventas-raw: lideres e ISR (Replicas 1,2 / Isr 1,2)
+Topic: ventas-raw	TopicId: KtloGT1ST9ej3l6FEcph-w	PartitionCount: 4	ReplicationFactor: 2	Configs: min.insync.replicas=1,cleanup.policy=delete,retention.ms=604800000,unclean.leader.election.enable=false
+	Topic: ventas-raw	Partition: 0	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw	Partition: 1	Leader: 2	Replicas: 2,1	Isr: 1,2
+	Topic: ventas-raw	Partition: 2	Leader: 1	Replicas: 1,2	Isr: 1,2
+	Topic: ventas-raw	Partition: 3	Leader: 2	Replicas: 2,1	Isr: 1,2
+
+== Particiones sub-replicadas (vacio = OK)
+

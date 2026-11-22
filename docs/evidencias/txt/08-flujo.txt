@@ -1,0 +1,39 @@
+$ ./verificar.sh flujo
+
+==== ventas-raw: ultimas ventas con key, particion y offset ====
+particion=1 offset=99 key=T05
+  {"eventId":"a2b3026a-816f-42ad-bf8d-a2abbb58bcbb","tiendaId":"T05","tiendaNombre":"Vina del Mar","eventTime":"2026-11-22T17:35:07.401971974Z","clienteId":"cliente-0078","producto":"Cargador USB-C","categoria":"tecnologia","canal":"presencial","medioPago":"transferencia","cantidad":4,"precioUnitari
+particion=1 offset=100 key=T05
+  {"eventId":"824811e5-4d31-42b6-9e0e-2c675335f7b7","tiendaId":"T05","tiendaNombre":"Vina del Mar","eventTime":"2026-11-22T17:35:12.407582390Z","clienteId":"cliente-0049","producto":"Polera algodon","categoria":"vestuario","canal":"presencial","medioPago":"efectivo","cantidad":3,"precioUnitario":975
+particion=3 offset=197 key=T03
+  {"eventId":"ca058034-0602-48e8-845b-857c13659c02","tiendaId":"T03","tiendaNombre":"Las Condes","eventTime":"2026-11-22T17:35:14.409823450Z","clienteId":"cliente-0068","producto":"Cafe 250 g","categoria":"supermercado","canal":"presencial","medioPago":"debito","cantidad":3,"precioUnitario":6340,"to
+particion=3 offset=198 key=T01
+  {"eventId":"145f27f2-f42f-447d-85be-4911e0efa0d8","tiendaId":"T01","tiendaNombre":"Santiago Centro","eventTime":"2026-11-22T17:35:14.910349310Z","clienteId":"cliente-0058","producto":"Audifonos","categoria":"tecnologia","canal":"presencial","medioPago":"transferencia","cantidad":3,"precioUnitario"
+particion=0 offset=334 key=T04
+  {"eventId":"b1230620-2d03-4070-86cf-7c5759699dfa","tiendaId":"T04","tiendaNombre":"Maipu","eventTime":"2026-11-22T17:35:11.906962936Z","clienteId":"cliente-0189","producto":"Polera algodon","categoria":"vestuario","canal":"presencial","medioPago":"credito","cantidad":2,"precioUnitario":13230,"tota
+particion=0 offset=335 key=T04
+  {"eventId":"97a407a5-37e5-4398-952e-52be2534e6e2","tiendaId":"T04","tiendaNombre":"Maipu","eventTime":"2026-11-22T17:35:12.908245495Z","clienteId":"cliente-0046","producto":"Arroz 1 kg","categoria":"supermercado","canal":"presencial","medioPago":"efectivo","cantidad":2,"precioUnitario":1240,"total
+particion=2 offset=223 key=T02
+  {"eventId":"e5baebda-78cc-4998-b146-82f66200f0b2","tiendaId":"T02","tiendaNombre":"Providencia","eventTime":"2026-11-22T17:35:10.905873607Z","clienteId":"cliente-0164","producto":"Arroz 1 kg","categoria":"supermercado","canal":"presencial","medioPago":"credito","cantidad":4,"precioUnitario":1460,"
+particion=2 offset=224 key=T08
+  {"eventId":"e2aa9f4b-efd9-456b-892d-20fff2607f86","tiendaId":"T08","tiendaNombre":"App Movil","eventTime":"2026-11-22T17:35:13.909340976Z","clienteId":"cliente-0193","producto":"Cargador USB-C","categoria":"tecnologia","canal":"app","medioPago":"debito","cantidad":3,"precioUnitario":13460,"total":
+
+
+==== ventas-agregadas: ultimos agregados (inicio/fin de ventana, conteo, monto, ticket promedio) ====
+particion=0 offset=40 key=T06
+  {"tiendaId":"T06","windowStart":"2026-11-22T17:33:00Z","windowEnd":"2026-11-22T17:34:00Z","cantidadVentas":17,"unidades":46,"montoTotal":901510,"ticketPromedio":53030,"primerEvento":"2026-11-22T17:33:03.734490243Z","ultimoEvento":"2026-11-22T17:33:59.307655427Z","publicadoEn":"2026-11-22T17:34:30.965319028Z"}
+particion=0 offset=41 key=T07
+  {"tiendaId":"T07","windowStart":"2026-11-22T17:33:00Z","windowEnd":"2026-11-22T17:34:00Z","cantidadVentas":17,"unidades":47,"montoTotal":559460,"ticketPromedio":32909,"primerEvento":"2026-11-22T17:33:10.744978176Z","ultimoEvento":"2026-11-22T17:33:55.802385696Z","publicadoEn":"2026-11-22T17:34:30.966259395Z"}
+particion=1 offset=31 key=T01
+  {"tiendaId":"T01","windowStart":"2026-11-22T17:33:00Z","windowEnd":"2026-11-22T17:34:00Z","cantidadVentas":18,"unidades":47,"montoTotal":659100,"ticketPromedio":36617,"primerEvento":"2026-11-22T17:33:01.231038637Z","ultimoEvento":"2026-11-22T17:33:51.797496559Z","publicadoEn":"2026-11-22T17:34:34.468271808Z"}
+particion=1 offset=32 key=T03
+  {"tiendaId":"T03","windowStart":"2026-11-22T17:33:00Z","windowEnd":"2026-11-22T17:34:00Z","cantidadVentas":13,"unidades":34,"montoTotal":739900,"ticketPromedio":56915,"primerEvento":"2026-11-22T17:33:00.730306886Z","ultimoEvento":"2026-11-22T17:33:57.304878804Z","publicadoEn":"2026-11-22T17:34:34.468695998Z"}
+
+
+==== Consumer group ventas-aggregator: offsets y lag ====
+GROUP             TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                    
+ventas-aggregator ventas-raw      0          354             354             0               ventas-aggregator-5fad0f95-7e4d-4611-ae7b-5ec2c
+ventas-aggregator ventas-raw      1          108             108             0               ventas-aggregator-5fad0f95-7e4d-4611-ae7b-5ec2c
+ventas-aggregator ventas-raw      2          232             232             0               ventas-aggregator-5fad0f95-7e4d-4611-ae7b-5ec2c
+ventas-aggregator ventas-raw      3          207             208             1               ventas-aggregator-5fad0f95-7e4d-4611-ae7b-5ec2c
+

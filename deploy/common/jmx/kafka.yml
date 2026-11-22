@@ -1,0 +1,5 @@
+# JMX exporter para los brokers (puerto 7071): exporta todos los MBeans (Kafka + JVM)
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+rules:
+  - pattern: ".*"

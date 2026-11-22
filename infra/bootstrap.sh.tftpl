@@ -1,0 +1,100 @@
+#!/bin/bash
+# Bootstrap de la EC2 "${role}" (se ejecuta una vez, en el primer arranque, via cloud-init).
+# Instala Docker, descarga su configuracion desde S3, escribe su .env y levanta sus contenedores.
+# Al apagar/encender, Docker levanta todo solo (restart: unless-stopped).
+set -uxo pipefail
+exec > >(tee -a /var/log/ep5-bootstrap.log) 2>&1
+
+ROLE="${role}"
+BUCKET="${bucket}"
+REGION="${region}"
+DIR=/opt/ep5
+mkdir -p $DIR/$ROLE $DIR/common $DIR/scripts $DIR/jmx /var/lib/ep5
+echo "EN_PROGRESO $(date -u +%FT%TZ)" > /var/lib/ep5/bootstrap.status
+
+# Swap de 1 GB: margen de memoria para las t3.small
+if [ ! -f /swapfile ]; then
+  fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+export DEBIAN_FRONTEND=noninteractive
+for i in 1 2 3 4 5; do
+  apt-get update -y && apt-get install -y docker.io docker-compose-v2 unzip curl gettext-base && break
+  sleep 15
+done
+systemctl enable --now docker
+usermod -aG docker ubuntu || true
+
+if ! command -v aws >/dev/null; then
+  curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+  unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install
+fi
+
+aws s3 sync "s3://$BUCKET/deploy/common/" $DIR/common/ --region "$REGION"
+aws s3 sync "s3://$BUCKET/deploy/$ROLE/" $DIR/$ROLE/ --region "$REGION"
+aws s3 sync "s3://$BUCKET/scripts/" $DIR/scripts/ --region "$REGION"
+echo "$BUCKET" > /var/lib/ep5/bucket
+
+# Variables de este host (IP privadas fijas definidas en Terraform)
+cat > $DIR/$ROLE/.env <<EOF
+HOST_NAME=${role}
+HOST_IP=${host_ip}
+BROKER_ID=${broker_id}
+ZK_CONNECT=${kafka_1_ip}:2181
+KAFKA_BOOTSTRAP_SERVERS=${kafka_1_ip}:9092,${kafka_2_ip}:9092
+KAFKA_1_IP=${kafka_1_ip}
+KAFKA_2_IP=${kafka_2_ip}
+APP_IP=${app_ip}
+LOKI_URL=http://${monitoring_ip}:3100/loki/api/v1/push
+%{ if role == "monitoring" ~}
+GRAFANA_ADMIN_PASSWORD=${grafana_password}
+KAFKA_UI_PASSWORD=${kafka_ui_password}
+%{ endif ~}
+EOF
+chmod 600 $DIR/$ROLE/.env
+
+%{ if role == "kafka-1" || role == "kafka-2" ~}
+# Agente JMX -> Prometheus para broker (7071) y ZooKeeper (7072)
+curl -fsSL -o $DIR/jmx/jmx_prometheus_javaagent.jar \
+  https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/1.0.1/jmx_prometheus_javaagent-1.0.1.jar
+cp $DIR/common/jmx/*.yml $DIR/jmx/
+%{ endif ~}
+
+%{ if role == "monitoring" ~}
+set -a; . $DIR/$ROLE/.env; set +a
+envsubst '$KAFKA_1_IP $KAFKA_2_IP $APP_IP' < $DIR/$ROLE/prometheus.yml.tpl > $DIR/$ROLE/prometheus.yml
+%{ endif ~}
+
+%{ if role == "app" ~}
+# Si la app Kafka ya fue subida (./verificar.sh subir-app), se construye y levanta todo; si no,
+# solo la API de usuarios (viene en deploy/app) y Alloy.
+if aws s3 ls "s3://$BUCKET/app/app.tgz" --region "$REGION" >/dev/null 2>&1; then
+  mkdir -p $DIR/app/build
+  aws s3 cp "s3://$BUCKET/app/app.tgz" /tmp/app.tgz --region "$REGION"
+  tar -xzf /tmp/app.tgz -C $DIR/app/build
+  SERVICIOS=""
+else
+  SERVICIOS="api-usuarios alloy"
+fi
+%{ else ~}
+SERVICIOS=""
+%{ endif ~}
+
+cd $DIR/$ROLE
+for i in 1 2 3; do
+  docker compose up -d --build $SERVICIOS && break
+  sleep 20
+done
+
+%{ if role == "kafka-1" ~}
+# Espera a que los 2 brokers esten registrados y crea los topics (idempotente)
+for i in $(seq 1 60); do
+  n=$(docker exec -e KAFKA_OPTS= kafka kafka-broker-api-versions --bootstrap-server localhost:9092 2>/dev/null | grep -c '(id:')
+  [ "$n" -ge 2 ] && break
+  sleep 10
+done
+BOOTSTRAP=localhost:9092 KAFKA_CMD="docker exec -e KAFKA_OPTS= kafka" bash $DIR/scripts/topicos.sh crear
+%{ endif ~}
+
+echo "BOOTSTRAP OK $(date -u +%FT%TZ)" > /var/lib/ep5/bootstrap.status

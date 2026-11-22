@@ -1,0 +1,24 @@
+%% Despliegue en AWS Academy Learner Lab con Terraform (infra/) + bucket S3 creado por verificar.sh
+flowchart TB
+  OP["Operador<br/>./verificar.sh (AWS CLI + SSM, sin SSH)"]
+  S3[("S3 ep5-kafka-deploy-cuenta<br/>deploy/ · scripts/ · app/app.tgz")]
+  subgraph VPC["VPC ep5-kafka 10.20.0.0/16"]
+    subgraph A["subred a 10.20.1.0/24 · us-east-1a"]
+      K1["kafka-1 t3.small<br/>ZooKeeper + broker 1 + Alloy"]
+    end
+    subgraph B["subred b 10.20.2.0/24 · us-east-1b"]
+      K2["kafka-2 t3.small<br/>broker 2 + 4 lectores kcat + Alloy"]
+      AP["app t3.small<br/>producer + Kafka Streams + api-usuarios + Alloy"]
+      MO["monitoring t3.medium<br/>Prometheus + Grafana + Loki<br/>kafka-exporter + Kafka UI + Alloy"]
+    end
+  end
+  OP -- "terraform apply" --> VPC
+  OP -- "aws s3 sync / cp" --> S3
+  S3 -- "bootstrap (LabInstanceProfile)" --> K1 & K2 & AP & MO
+  OP -- "SSM send-command" --> K1 & K2 & AP & MO
+  OP -- "HTTP desde tu IP: 3000 / 8080 / 9090" --> MO
+  OP -- "HTTP desde tu IP: 8081" --> AP
+  AP -- "9092" --> K1 & K2
+  K2 -- "2181" --> K1
+  MO -- "scrape 7071/7072/9406-9408 · 9092" --> K1 & K2 & AP
+  K1 & K2 & AP -- "logs 3100" --> MO

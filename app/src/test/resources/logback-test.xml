@@ -1,0 +1,9 @@
+<configuration>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder><pattern>%d{HH:mm:ss.SSS} %-5level %logger{0} - %msg%n</pattern></encoder>
+  </appender>
+  <logger name="org.apache.kafka" level="ERROR"/>
+  <!-- En Windows no se pueden aplicar permisos POSIX al state dir: ruido sin efecto en las pruebas -->
+  <logger name="org.apache.kafka.streams.processor.internals.StateDirectory" level="OFF"/>
+  <root level="WARN"><appender-ref ref="STDOUT"/></root>
+</configuration>

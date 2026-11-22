@@ -1,0 +1,80 @@
+# EC2 kafka-2: broker 2 + lectores de topics (kcat -> stdout -> Alloy -> Loki) + Alloy.
+name: ep5-kafka-2
+
+x-lector: &lector
+  image: edenhill/kcat:1.7.1
+  restart: unless-stopped
+  network_mode: host
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: kafka
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      KAFKA_BROKER_ID: ${BROKER_ID}
+      KAFKA_ZOOKEEPER_CONNECT: ${ZK_CONNECT}
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${HOST_IP}:9092
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE: "false"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_AUTO_LEADER_REBALANCE_ENABLE: "true"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_ZOOKEEPER_SESSION_TIMEOUT_MS: 18000
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx512m"
+      KAFKA_OPTS: "-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/kafka.yml"
+      KAFKA_CUB_ZK_TIMEOUT: 300
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+      - /opt/ep5/jmx:/opt/jmx:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9092'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  # Un lector por topic de negocio: imprime cada mensaje (con particion, offset, key y headers)
+  # para verlo en Grafana -> Explore -> Loki. Usan consumer groups propios (demo-logs-*).
+  lector-ventas-raw:
+    <<: *lector
+    container_name: lector-ventas-raw
+    command: ["-b", "${KAFKA_BOOTSTRAP_SERVERS}", "-G", "demo-logs-ventas-raw", "-u", "-X", "auto.offset.reset=latest",
+              "-f", "TOPIC=%t PARTICION=%p OFFSET=%o KEY=%k VALOR=%s\n", "ventas-raw"]
+  lector-ventas-agregadas:
+    <<: *lector
+    container_name: lector-ventas-agregadas
+    command: ["-b", "${KAFKA_BOOTSTRAP_SERVERS}", "-G", "demo-logs-ventas-agregadas", "-u", "-X", "auto.offset.reset=latest",
+              "-f", "TOPIC=%t PARTICION=%p OFFSET=%o KEY=%k VALOR=%s\n", "ventas-agregadas"]
+  lector-ventas-dlq:
+    <<: *lector
+    container_name: lector-ventas-dlq
+    command: ["-b", "${KAFKA_BOOTSTRAP_SERVERS}", "-G", "demo-logs-ventas-dlq", "-u", "-X", "auto.offset.reset=latest",
+              "-f", "TOPIC=%t PARTICION=%p OFFSET=%o KEY=%k HEADERS=%h VALOR=%s\n", "ventas-raw-dlq"]
+  lector-ventas-descartadas:
+    <<: *lector
+    container_name: lector-ventas-descartadas
+    command: ["-b", "${KAFKA_BOOTSTRAP_SERVERS}", "-G", "demo-logs-ventas-descartadas", "-u", "-X", "auto.offset.reset=latest",
+              "-f", "TOPIC=%t PARTICION=%p OFFSET=%o KEY=%k VALOR=%s\n", "ventas-descartadas"]
+
+  alloy:
+    image: grafana/alloy:v1.5.1
+    container_name: grafana-alloy
+    restart: unless-stopped
+    command: ["run", "/etc/alloy/config.alloy", "--storage.path=/var/lib/alloy/data"]
+    environment:
+      HOST_NAME: ${HOST_NAME}
+      LOKI_URL: ${LOKI_URL}
+    volumes:
+      - /opt/ep5/common/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+
+volumes:
+  kafka-data:
+  alloy-data:

@@ -1,0 +1,106 @@
+$ ./verificar.sh casos todos
+
+==== Casos controlados: todos (tienda T-DEMO) ====
+
+== valida: venta correcta -> se suma al agregado de T-DEMO
+  valida                       -> ventas-raw-1@110 key=T-DEMO | esperado: suma 1 venta / $5.000
+                                  valor: {"eventId":"demo-valida-173548-5caf","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:35:48.113749242Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"presenc...
+
+== json-malformado: JSON truncado -> DLQ JSON_MALFORMADO
+  json-malformado              -> ventas-raw-1@111 key=T-DEMO | esperado: DLQ JSON_MALFORMADO, rawValue intacto
+                                  valor: {"eventId":"demo-malformado-173548-96ba","tiendaId":"T-DEMO","eventTime":"2026-11-22T17:35:49.200698135Z","cantidad":1,
+
+== campo-faltante: sin eventTime -> DLQ CAMPO_INVALIDO
+  campo-faltante               -> ventas-raw-1@112 key=T-DEMO | esperado: DLQ CAMPO_INVALIDO (eventTime ausente)
+                                  valor: {"eventId":"demo-sin-eventtime-173548-dfa8","tiendaId":"T-DEMO","cantidad":1,"precioUnitario":5000,"total":5000}
+
+== campo-invalido: cantidad como texto -> DLQ CAMPO_INVALIDO
+  campo-invalido               -> ventas-raw-1@113 key=T-DEMO | esperado: DLQ CAMPO_INVALIDO (cantidad no es entero)
+                                  valor: {"eventId":"demo-cantidad-texto-173548-f3f1","tiendaId":"T-DEMO","eventTime":"2026-11-22T17:35:49.828904810Z","cantidad":"dos","precioUnitario":5000,"total":10000}
+
+== total-incorrecto: total != cantidad x precio -> DLQ REGLA_NEGOCIO
+  total-incorrecto             -> ventas-raw-1@114 key=T-DEMO | esperado: DLQ REGLA_NEGOCIO (2 x 5000 != 9999)
+                                  valor: {"eventId":"demo-total-malo-173548-428f","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:35:50.142905059Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"pre...
+
+== fecha-futura: eventTime 2 h en el futuro -> DLQ REGLA_NEGOCIO
+  fecha-futura                 -> ventas-raw-1@116 key=T-DEMO | esperado: DLQ REGLA_NEGOCIO (no adelanta el stream time)
+                                  valor: {"eventId":"demo-futura-173548-e720","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T19:35:50.459077526Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"presenc...
+
+== duplicado: misma venta (mismo eventId) 2 veces -> 1.a suma, 2.a ventas-descartadas DUPLICADO
+  duplicado (1.a)              -> ventas-raw-1@117 key=T-DEMO | esperado: se suma: 1 venta / $10.000
+                                  valor: {"eventId":"demo-duplicado-173548-b669","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:35:50.773727287Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"pres...
+  duplicado (2.a)              -> ventas-raw-1@118 key=T-DEMO | esperado: ventas-descartadas DUPLICADO; NO suma
+                                  valor: {"eventId":"demo-duplicado-173548-b669","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:35:50.773727287Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"pres...
+
+== tardio-en-gracia: eventTime 15 s anterior al mas reciente -> se suma a su ventana original
+  ancla                        -> ventas-raw-1@119 key=T-DEMO | esperado: fija el stream time en 2026-11-22T17:35:51.098948534Z
+                                  valor: {"eventId":"demo-ancla-g-173548-158f","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:35:51.098948534Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"presen...
+  tardio-en-gracia             -> ventas-raw-1@120 key=T-DEMO | esperado: eventTime 2026-11-22T17:35:36.098948534Z: su ventana sigue abierta -> se suma a su ventana original ($7.000)
+                                  valor: {"eventId":"demo-tardio-gracia-173548-b8c1","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:35:36.098948534Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"...
+
+== tardio-fuera-de-gracia: eventTime 3 min anterior -> ventas-descartadas TARDIO_FUERA_DE_GRACIA (no DLQ)
+  ancla                        -> ventas-raw-1@121 key=T-DEMO | esperado: fija el stream time en 2026-11-22T17:35:51.427759169Z
+                                  valor: {"eventId":"demo-ancla-f-173548-6921","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:35:51.427759169Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"presen...
+  tardio-fuera-de-gracia       -> ventas-raw-1@122 key=T-DEMO | esperado: eventTime 2026-11-22T17:32:51.427759169Z: ventana cerrada -> ventas-descartadas TARDIO_FUERA_DE_GRACIA, no DLQ
+                                  valor: {"eventId":"demo-tardio-fuera-173548-dc35","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:32:51.427759169Z","clienteId":"cliente-demo","producto":"Producto demo","categoria":"demo","canal":"p...
+
+Los agregados de T-DEMO aparecen en ventas-agregadas al cerrar cada ventana (fin + 30 s de gracia).
+
+... esperando 100s a que cierren las ventanas de T-DEMO (60 s + 30 s de gracia)
+
+==== DLQ (ventas-raw-dlq): mensajes de T-DEMO con tipo, origen y valor original ====
+JSON_MALFORMADO origen=ventas-raw-1@111 key=T-DEMO eventId=None
+   motivo:   JSON no parseable: Unexpected end-of-input within/between Object entries
+   rawValue: {"eventId":"demo-malformado-173548-96ba","tiendaId":"T-DEMO","eventTime":"2026-11-22T17:35:49.200698135Z","cantidad":1,
+CAMPO_INVALIDO origen=ventas-raw-1@112 key=T-DEMO eventId=demo-sin-eventtime-173548-dfa8
+   motivo:   eventTime ausente o no es texto
+   rawValue: {"eventId":"demo-sin-eventtime-173548-dfa8","tiendaId":"T-DEMO","cantidad":1,"precioUnitario":5000,"total":5000}
+CAMPO_INVALIDO origen=ventas-raw-1@113 key=T-DEMO eventId=demo-cantidad-texto-173548-f3f1
+   motivo:   cantidad debe ser un numero entero (recibido: "dos")
+   rawValue: {"eventId":"demo-cantidad-texto-173548-f3f1","tiendaId":"T-DEMO","eventTime":"2026-11-22T17:35:49.828904810Z","cantidad":"dos","precioUnitario":5000,"total":10000}
+REGLA_NEGOCIO origen=ventas-raw-1@114 key=T-DEMO eventId=demo-total-malo-173548-428f
+   motivo:   total 9999 != cantidad 2 x precioUnitario 5000 (= 10000)
+   rawValue: {"eventId":"demo-total-malo-173548-428f","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T17:35:50.142905059Z","clienteId":"cliente-demo","product
+REGLA_NEGOCIO origen=ventas-raw-1@116 key=T-DEMO eventId=demo-futura-173548-e720
+   motivo:   eventTime 2026-11-22T19:35:50.459077526Z esta mas de 300 s en el futuro
+   rawValue: {"eventId":"demo-futura-173548-e720","tiendaId":"T-DEMO","tiendaNombre":"Tienda Demo","eventTime":"2026-11-22T19:35:50.459077526Z","clienteId":"cliente-demo","producto":"
+
+
+==== Registro DLQ completo (el mas reciente de T-DEMO) ====
+{
+    "sourceTopic": "ventas-raw",
+    "sourcePartition": 1,
+    "sourceOffset": 116,
+    "originalKey": "T-DEMO",
+    "rawValue": "{\"eventId\":\"demo-futura-173548-e720\",\"tiendaId\":\"T-DEMO\",\"tiendaNombre\":\"Tienda Demo\",\"eventTime\":\"2026-11-22T19:35:50.459077526Z\",\"clienteId\":\"cliente-demo\",\"producto\":\"Producto demo\",\"categoria\":\"demo\",\"canal\":\"presencial\",\"medioPago\":\"debito\",\"cantidad\":1,\"precioUnitario\":5000,\"total\":5000}",
+    "eventId": "demo-futura-173548-e720",
+    "errorType": "REGLA_NEGOCIO",
+    "error": "eventTime 2026-11-22T19:35:50.459077526Z esta mas de 300 s en el futuro",
+    "failedAt": "2026-11-22T17:35:50.483Z",
+    "applicationId": "ventas-aggregator"
+}
+
+
+==== ventas-descartadas: duplicados y tardios fuera de gracia de T-DEMO (no pasan por la DLQ) ====
+DUPLICADO eventId=demo-duplicado-173548-b669 ventana=[2026-11-22T17:35:00Z, 2026-11-22T17:36:00Z) streamTime=2026-11-22T17:35:50.773Z origen=ventas-raw-1@118
+   detalle: eventId ya aceptado en ventas-raw-1@117
+TARDIO_FUERA_DE_GRACIA eventId=demo-tardio-fuera-173548-dc35 ventana=[2026-11-22T17:32:00Z, 2026-11-22T17:33:00Z) streamTime=2026-11-22T17:35:51.427Z origen=ventas-raw-1@122
+   detalle: la ventana cerro en 2026-11-22T17:33:30Z y el stream time es 2026-11-22T17:35:51.427Z (atraso 180 s)
+
+
+==== ventas-agregadas: ventanas de T-DEMO ====
+ventana [2026-11-22T17:35:00Z, 2026-11-22T17:36:00Z) ventas=5 unidades=6 monto=24000 ticketPromedio=4800
+
+
+==== Log de Kafka Streams para T-DEMO (el contenedor sigue arriba) ====
+2026-11-22T17:35:49.216Z WARN  Validacion - DLQ tipo=JSON_MALFORMADO motivo="JSON no parseable: Unexpected end-of-input within/between Object entries" origen=ventas-raw-1@111 key=T-DEMO eventId=null
+2026-11-22T17:35:49.525Z WARN  Validacion - DLQ tipo=CAMPO_INVALIDO motivo="eventTime ausente o no es texto" origen=ventas-raw-1@112 key=T-DEMO eventId=demo-sin-eventtime-173548-dfa8
+2026-11-22T17:35:49.849Z WARN  Validacion - DLQ tipo=CAMPO_INVALIDO motivo="cantidad debe ser un numero entero (recibido: "dos")" origen=ventas-raw-1@113 key=T-DEMO eventId=demo-cantidad-texto-173548-f3f1
+2026-11-22T17:35:50.163Z WARN  Validacion - DLQ tipo=REGLA_NEGOCIO motivo="total 9999 != cantidad 2 x precioUnitario 5000 (= 10000)" origen=ventas-raw-1@114 key=T-DEMO eventId=demo-total-malo-173548-428f
+2026-11-22T17:35:50.483Z WARN  Validacion - DLQ tipo=REGLA_NEGOCIO motivo="eventTime 2026-11-22T19:35:50.459077526Z esta mas de 300 s en el futuro" origen=ventas-raw-1@116 key=T-DEMO eventId=demo-futura-173548-e720
+2026-11-22T17:35:50.805Z WARN  Tiempo - DESCARTE motivo=DUPLICADO eventId=demo-duplicado-173548-b669 tienda=T-DEMO eventTime=2026-11-22T17:35:50.773727287Z ventana=[2026-11-22T17:35:00Z , 2026-11-22T17:36:00Z) streamTime=2026-11-22T17:35:50.773Z origen=ventas-raw-1@118 detalle="eventId ya aceptado en ventas-raw-1@117"
+2026-11-22T17:35:51.124Z INFO  Tiempo - TARDIO_EN_GRACIA eventId=demo-tardio-gracia-173548-b8c1 tienda=T-DEMO eventTime=2026-11-22T17:35:36.098948534Z streamTime=2026-11-22T17:35:51.098Z atraso=15s ventana=[2026-11-22T17:35:00Z , 2026-11-22T17:36:00Z) cierra=2026-11-22T17:36:30Z -> se suma a su ventana original
+2026-11-22T17:35:51.463Z WARN  Tiempo - DESCARTE motivo=TARDIO_FUERA_DE_GRACIA eventId=demo-tardio-fuera-173548-dc35 tienda=T-DEMO eventTime=2026-11-22T17:32:51.427759169Z ventana=[2026-11-22T17:32:00Z , 2026-11-22T17:33:00Z) streamTime=2026-11-22T17:35:51.427Z origen=ventas-raw-1@122 detalle="la ventana cerro en 2026-11-22T17:3
+2026-11-22T17:36:32.013Z INFO  Agregados - AGREGADO tienda=T-DEMO ventana=[2026-11-22T17:35:00Z , 2026-11-22T17:36:00Z) ventas=5 unidades=6 monto=24000 ticketPromedio=4800
+ventas-app-streams-1 Up 6 minutes
+

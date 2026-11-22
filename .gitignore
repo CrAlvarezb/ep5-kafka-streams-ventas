@@ -1,0 +1,23 @@
+# Compilacion
+app/target/
+**/__pycache__/
+
+# Terraform: estado local (contiene IDs y contrasenas generadas) y plugins
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+!infra/*.tfvars.example
+crash.log
+
+# Variables reales y credenciales: NUNCA al repositorio
+.env
+*.env
+!*.env.example
+.aws/
+*.pem
+*.ppk
+credentials
+
+# Artefactos de despliegue
+deploy/app/build/

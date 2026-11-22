@@ -1,0 +1,22 @@
+$ ./verificar.sh escalar
+
+==== Escalando Kafka Streams a 2 instancias (mismo application.id) ====
+ Container ventas-app-streams-2  Created
+ Container ventas-app-streams-2  Starting
+ Container ventas-app-streams-2  Started
+ventas-app-streams-1  Up 2 minutes  0.0.0.0:9407->9407/tcp, [::]:9407->9407/tcp
+ventas-app-streams-2  Up 45 seconds  0.0.0.0:9408->9407/tcp, [::]:9408->9407/tcp
+
+
+==== Reparto de particiones de ventas-raw entre las instancias ====
+particion 0 -> instancia 698034bf
+particion 1 -> instancia bed6a69a
+particion 2 -> instancia 698034bf
+particion 3 -> instancia bed6a69a
+
+
+==== Vuelta a 1 instancia ====
+ Container ventas-app-streams-2  Removing
+ Container ventas-app-streams-2  Removed
+ventas-app-streams-1  Up 3 minutes
+

@@ -1,0 +1,86 @@
+# EC2 app: productor continuo + Kafka Streams (+ herramientas casos/conciliar bajo demanda).
+# La imagen se construye desde ./build (Dockerfile + jar), que sube ./verificar.sh subir-app.
+name: ventas-app
+
+x-env: &env
+  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+  APPLICATION_ID: ${APPLICATION_ID:-ventas-aggregator}
+  TOPIC_RAW: ${TOPIC_RAW:-ventas-raw}
+  TOPIC_AGREGADAS: ${TOPIC_AGREGADAS:-ventas-agregadas}
+  TOPIC_DLQ: ${TOPIC_DLQ:-ventas-raw-dlq}
+  TOPIC_DESCARTADAS: ${TOPIC_DESCARTADAS:-ventas-descartadas}
+  VENTANA_SEGUNDOS: ${VENTANA_SEGUNDOS:-60}
+  GRACIA_SEGUNDOS: ${GRACIA_SEGUNDOS:-30}
+  DEDUP_RETENCION_SEGUNDOS: ${DEDUP_RETENCION_SEGUNDOS:-600}
+  FUTURO_MAX_SEGUNDOS: ${FUTURO_MAX_SEGUNDOS:-300}
+  REPLICATION_FACTOR: ${REPLICATION_FACTOR:-2}
+  NUM_STREAM_THREADS: ${NUM_STREAM_THREADS:-1}
+  STATE_DIR: /tmp/kafka-streams
+  VENTAS_POR_SEGUNDO: ${VENTAS_POR_SEGUNDO:-2}
+
+x-app: &app
+  image: ventas-app:local
+  build: ./build
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: "20m", max-file: "3"}
+
+services:
+  producer:
+    <<: *app
+    command: ["producer"]
+    environment:
+      <<: *env
+      METRICS_PORT: "9406"
+      JAVA_OPTS: "-Xms64m -Xmx256m"
+    ports: ["9406:9406"]
+
+  # Sin volumen para el state dir a proposito: al recrear el contenedor se pierde el RocksDB local
+  # y Kafka Streams debe reconstruir los stores desde sus changelog (prueba reinicio-streams).
+  streams:
+    <<: *app
+    command: ["streams"]
+    environment:
+      <<: *env
+      METRICS_PORT: "9407"
+    ports: ["9407-9408:9407"]
+
+  casos:
+    <<: *app
+    restart: "no"
+    profiles: ["herramientas"]
+    command: ["casos", "lista"]
+    environment:
+      <<: *env
+      JAVA_OPTS: "-Xms64m -Xmx192m"
+
+  # API REST de usuarios (Flask + gunicorn) entregada por el curso. Independiente del flujo Kafka:
+  # se construye desde ./api-usuarios (viene con deploy/, no necesita subir-app).
+  api-usuarios:
+    image: api-usuarios:local
+    build: ./api-usuarios
+    container_name: api-usuarios
+    restart: unless-stopped
+    ports: ["8081:8081"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  alloy:
+    image: grafana/alloy:v1.5.1
+    container_name: grafana-alloy
+    restart: unless-stopped
+    command: ["run", "/etc/alloy/config.alloy", "--storage.path=/var/lib/alloy/data"]
+    environment:
+      HOST_NAME: ${HOST_NAME}
+      LOKI_URL: ${LOKI_URL}
+    volumes:
+      - /opt/ep5/common/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+
+volumes:
+  alloy-data:

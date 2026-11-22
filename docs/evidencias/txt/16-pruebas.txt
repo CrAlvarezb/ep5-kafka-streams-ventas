@@ -1,0 +1,36 @@
+$ ./verificar.sh pruebas
+
+==== Pruebas automatizadas (mvn test) ====
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.210 s -- in cl.duoc.ventas.TopologiaTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.161 s -- in cl.duoc.ventas.ValidadorVentaTest
+[INFO] Tests run: 25, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+==== Detalle por prueba (target/surefire-reports) ====
+cl.duoc.ventas.TopologiaTest
+  OK   DLQ: errores de campo y de negocio con su tipo  (1.424 s)
+  OK   Tiempo de evento: un eventTime futuro va a la DLQ y no adelanta el stream time  (0.472 s)
+  OK   Tiempo de evento: un tardio fuera de gracia se descarta con registro, no va a la DLQ  (0.259 s)
+  OK   DLQ: el invalido conserva original, key, topic, particion, offset y motivo; el flujo sigue  (0.214 s)
+  OK   Tiempo de evento: un tardio dentro de la gracia se suma a su ventana original  (0.262 s)
+  OK   Agregacion: conteo, monto, ticket promedio e inicio/fin de ventana; se publica solo al cerrar  (0.287 s)
+  OK   Duplicados: el mismo eventId dos veces se cuenta una sola vez y queda auditado  (0.244 s)
+cl.duoc.ventas.ValidadorVentaTest
+  OK   Una venta correcta se convierte al DTO tipado  (0.003 s)
+  OK   La key Kafka debe coincidir con tiendaId -> REGLA_NEGOCIO  (0.003 s)
+  OK   Rechazos hacia la DLQ con su tipo JSON truncado -> JSON_MALFORMADO  (0.01 s)
+  OK   Rechazos hacia la DLQ con su tipo no es objeto (array) -> JSON_MALFORMADO  (0.003 s)
+  OK   Rechazos hacia la DLQ con su tipo valor vacio -> JSON_MALFORMADO  (0.002 s)
+  OK   Rechazos hacia la DLQ con su tipo sin eventId -> CAMPO_INVALIDO  (0.001 s)
+  OK   Rechazos hacia la DLQ con su tipo sin tiendaId -> CAMPO_INVALIDO  (0.001 s)
+  OK   Rechazos hacia la DLQ con su tipo sin eventTime -> CAMPO_INVALIDO  (0.002 s)
+  OK   Rechazos hacia la DLQ con su tipo eventTime no ISO-8601 -> CAMPO_INVALIDO  (0.002 s)
+  OK   Rechazos hacia la DLQ con su tipo cantidad como texto -> CAMPO_INVALIDO  (0.002 s)
+  OK   Rechazos hacia la DLQ con su tipo cantidad negativa -> CAMPO_INVALIDO  (0.003 s)
+  OK   Rechazos hacia la DLQ con su tipo cantidad cero -> CAMPO_INVALIDO  (0.002 s)
+  OK   Rechazos hacia la DLQ con su tipo precio decimal -> CAMPO_INVALIDO  (0.005 s)
+  OK   Rechazos hacia la DLQ con su tipo sin total -> CAMPO_INVALIDO  (0.002 s)
+  OK   Rechazos hacia la DLQ con su tipo total distinto -> REGLA_NEGOCIO  (0.002 s)
+  OK   Rechazos hacia la DLQ con su tipo eventTime 1 h en el futuro -> REGLA_NEGOCIO  (0.002 s)
+  OK   Un evento antiguo NO es invalido (lo decide la ventana, no el validador)  (0.003 s)
+  OK   Config rechaza retencion de dedup < ventana + gracia, topics repetidos, RF 3 y bootstrap ausente  (0.005 s)

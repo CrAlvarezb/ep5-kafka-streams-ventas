@@ -1,0 +1,106 @@
+{
+  "uid": "ep5-ventas",
+  "title": "EP5 - Kafka y streaming de ventas",
+  "tags": ["ep5", "kafka"],
+  "timezone": "utc",
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "time": {"from": "now-30m", "to": "now"},
+  "panels": [
+    {"type": "row", "title": "Disponibilidad del cluster", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "collapsed": false, "panels": []},
+    {
+      "type": "stat", "title": "Brokers activos", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 1},
+      "targets": [{"refId": "A", "expr": "kafka_brokers"}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "orange", "value": 1}, {"color": "green", "value": 2}]}}}
+    },
+    {
+      "type": "stat", "title": "Particiones sub-replicadas", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 1},
+      "targets": [{"refId": "A", "expr": "sum(kafka_topic_partition_under_replicated_partition)"}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}}
+    },
+    {
+      "type": "stat", "title": "Targets Prometheus arriba", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 1},
+      "targets": [{"refId": "A", "expr": "sum(up)", "legendFormat": "arriba"}, {"refId": "B", "expr": "count(up)", "legendFormat": "total"}]
+    },
+    {
+      "type": "stat", "title": "Lag total ventas-aggregator", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 1},
+      "targets": [{"refId": "A", "expr": "sum(kafka_consumergroup_lag{consumergroup=\"ventas-aggregator\", topic=\"ventas-raw\"})"}],
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 100}, {"color": "red", "value": 1000}]}}}
+    },
+    {
+      "type": "stat", "title": "Instancias de Kafka Streams", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 1},
+      "targets": [{"refId": "A", "expr": "sum(up{job=\"streams\"})"}]
+    },
+    {
+      "type": "stat", "title": "ZooKeeper (SPOF)", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 1},
+      "targets": [{"refId": "A", "expr": "up{job=\"zookeeper\"}"}],
+      "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "CAIDO", "color": "red"}, "1": {"text": "ARRIBA", "color": "green"}}}]}}
+    },
+    {
+      "type": "timeseries", "title": "ISR por particion (ventas-raw)", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "targets": [{"refId": "A", "expr": "kafka_topic_partition_in_sync_replica{topic=\"ventas-raw\"}", "legendFormat": "particion {{partition}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Particiones sub-replicadas por topic", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "targets": [{"refId": "A", "expr": "sum by (topic) (kafka_topic_partition_under_replicated_partition) > 0", "legendFormat": "{{topic}}"}]
+    },
+    {"type": "row", "title": "Flujo de datos", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 13}, "collapsed": false, "panels": []},
+    {
+      "type": "timeseries", "title": "Mensajes por segundo por topic", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "targets": [{"refId": "A", "expr": "sum by (topic) (rate(kafka_topic_partition_current_offset{topic=~\"ventas-.*\"}[1m]))", "legendFormat": "{{topic}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Lag de ventas-aggregator por particion", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "targets": [{"refId": "A", "expr": "kafka_consumergroup_lag{consumergroup=\"ventas-aggregator\", topic=\"ventas-raw\"}", "legendFormat": "particion {{partition}}"}]
+    },
+    {"type": "row", "title": "Negocio y resiliencia (desde los logs de Kafka Streams en Loki)", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 22}, "collapsed": false, "panels": []},
+    {
+      "type": "timeseries", "title": "Rechazos DLQ por tipo", "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 23},
+      "targets": [{"refId": "A", "expr": "sum by (tipo) (count_over_time({service=\"streams\"} |= \"DLQ tipo=\" | regexp \"DLQ tipo=(?P<tipo>\\\\S+)\" [1m]))", "legendFormat": "{{tipo}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Descartes por motivo y tardios en gracia", "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 23},
+      "targets": [
+        {"refId": "A", "expr": "sum by (motivo) (count_over_time({service=\"streams\"} |= \"DESCARTE motivo=\" | regexp \"DESCARTE motivo=(?P<motivo>\\\\S+)\" [1m]))", "legendFormat": "{{motivo}}"},
+        {"refId": "B", "expr": "sum(count_over_time({service=\"streams\"} |= \"TARDIO_EN_GRACIA\" [1m]))", "legendFormat": "TARDIO_EN_GRACIA (aceptado)"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "Agregados publicados y registros restaurados", "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 23},
+      "targets": [
+        {"refId": "A", "expr": "sum(count_over_time({service=\"streams\"} |= \"AGREGADO tienda=\" [1m]))", "legendFormat": "agregados publicados"},
+        {"refId": "B", "expr": "sum by (store) (sum_over_time({service=\"streams\"} |= \"RESTAURACION fin\" | regexp \"store=(?P<store>\\\\S+).*restaurados=(?P<n>\\\\d+)\" | unwrap n [5m]))", "legendFormat": "restaurados {{store}}"}
+      ]
+    },
+    {
+      "type": "logs", "title": "Logs de Kafka Streams (DLQ, descartes, tardios, agregados, estado)", "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 31},
+      "targets": [{"refId": "A", "expr": "{service=\"streams\"} |~ \"DLQ|DESCARTE|TARDIO|AGREGADO|RESTAURACION|Kafka Streams:\""}]
+    },
+    {"type": "row", "title": "JVM y productor", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 41}, "collapsed": false, "panels": []},
+    {
+      "type": "timeseries", "title": "Heap usado por proceso", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 42},
+      "targets": [{"refId": "A", "expr": "sum by (job, instance) (jvm_memory_used_bytes{area=\"heap\"})", "legendFormat": "{{job}} {{instance}}"}],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "type": "timeseries", "title": "Ventas producidas por segundo (offset ventas-raw)", "datasource": {"type": "prometheus", "uid": "prom"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 42},
+      "targets": [{"refId": "A", "expr": "sum(rate(kafka_topic_partition_current_offset{topic=\"ventas-raw\"}[1m]))", "legendFormat": "ventas/s"}]
+    }
+  ]
+}

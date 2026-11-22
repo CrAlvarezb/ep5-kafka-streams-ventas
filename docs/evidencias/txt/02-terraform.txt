@@ -1,0 +1,33 @@
+$ ./verificar.sh terraform
+
+==== Recursos creados por Terraform ====
+data.aws_ami.ubuntu
+data.aws_availability_zones.disponibles
+aws_instance.lab["app"]
+aws_instance.lab["kafka-1"]
+aws_instance.lab["kafka-2"]
+aws_instance.lab["monitoring"]
+aws_internet_gateway.lab
+aws_route_table.publica
+aws_route_table_association.lab["a"]
+aws_route_table_association.lab["b"]
+aws_security_group.app
+aws_security_group.kafka
+aws_security_group.monitoring
+aws_subnet.lab["a"]
+aws_subnet.lab["b"]
+aws_vpc.lab
+aws_vpc_security_group_egress_rule.todo["app"]
+aws_vpc_security_group_egress_rule.todo["kafka"]
+aws_vpc_security_group_egress_rule.todo["monitoring"]
+aws_vpc_security_group_ingress_rule.interna["app_metricas"]
+aws_vpc_security_group_ingress_rule.interna["kafka"]
+aws_vpc_security_group_ingress_rule.interna["kafka_metricas"]
+aws_vpc_security_group_ingress_rule.interna["loki"]
+aws_vpc_security_group_ingress_rule.interna["zookeeper"]
+aws_vpc_security_group_ingress_rule.publica["api_usuarios"]
+aws_vpc_security_group_ingress_rule.publica["grafana"]
+aws_vpc_security_group_ingress_rule.publica["kafka_ui"]
+aws_vpc_security_group_ingress_rule.publica["prometheus"]
+random_password.grafana
+random_password.kafka_ui

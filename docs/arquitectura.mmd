@@ -1,0 +1,41 @@
+%% Flujo de datos EP5. Topics con particiones (P), replicacion (RF) y key.
+flowchart LR
+  subgraph APP["EC2 app (10.20.2.20)"]
+    PROD["ProducerApp<br/>acks=all + idempotencia<br/>key = tiendaId"]
+    CASOS["CasosApp<br/>9 casos controlados (T-DEMO)"]
+    subgraph KS["Kafka Streams · application.id=ventas-aggregator · exactly_once_v2"]
+      EXT["EventTimeExtractor<br/>timestamp = eventTime"]
+      VAL["validar-venta<br/>JSON · campos · negocio"]
+      DED["dedup-y-tiempo<br/>store dedup-event-id (600 s)<br/>politica de tardios"]
+      WIN["ventana tumbling 60 s + gracia 30 s<br/>store ventas-por-tienda"]
+      SUP["suppress hasta el cierre<br/>store cierre-ventana-store"]
+      EXT --> VAL --> DED --> WIN --> SUP
+    end
+    API["api-usuarios (Flask)<br/>:8081"]
+  end
+
+  RAW[("ventas-raw<br/>P=4 · RF=2 · 7 d<br/>key tiendaId")]
+  AGG[("ventas-agregadas<br/>P=2 · RF=2 · 30 d<br/>key tiendaId")]
+  DLQ[("ventas-raw-dlq<br/>P=4 · RF=2 · 14 d<br/>key original")]
+  DES[("ventas-descartadas<br/>P=2 · RF=2 · 14 d<br/>key tiendaId")]
+  CHG[("3 changelog internos<br/>P=4 · RF=2 · compactados")]
+
+  PROD --> RAW
+  CASOS --> RAW
+  RAW --> EXT
+  VAL -- "JSON_MALFORMADO / CAMPO_INVALIDO / REGLA_NEGOCIO<br/>original + key + topic-particion@offset + motivo" --> DLQ
+  DED -- "DUPLICADO / TARDIO_FUERA_DE_GRACIA" --> DES
+  SUP -- "inicio/fin, conteo, unidades, monto, ticket promedio" --> AGG
+  KS <-.-> CHG
+
+  subgraph CL["Cluster Kafka: 2 brokers + 1 ZooKeeper (SPOF)"]
+    ZK["ZooKeeper<br/>kafka-1:2181"]
+    B1["broker 1<br/>kafka-1 10.20.1.10:9092"]
+    B2["broker 2<br/>kafka-2 10.20.2.10:9092"]
+    ZK --- B1
+    ZK --- B2
+  end
+  RAW -.- CL
+
+  classDef nuevo fill:#d9f2d9,stroke:#2e7d32;
+  class VAL,DED,WIN,SUP,EXT,CASOS,DES nuevo;

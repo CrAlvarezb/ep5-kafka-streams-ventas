@@ -1,0 +1,5 @@
+# JMX exporter para ZooKeeper (puerto 7072): exporta todos los MBeans (ZooKeeper + JVM)
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+rules:
+  - pattern: ".*"

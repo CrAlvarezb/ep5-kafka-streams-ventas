@@ -1,0 +1,6 @@
+# Exporta las metricas JMX de los clientes Kafka y de Kafka Streams (lag, throughput, restauracion,
+# registros descartados, estado de threads) y de la JVM.
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+rules:
+  - pattern: ".*"

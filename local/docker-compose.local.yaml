@@ -1,0 +1,116 @@
+# Plan B: todo el sistema en un solo equipo (sin AWS). Misma topologia: 1 ZooKeeper + 2 brokers,
+# topics creados con el mismo scripts/topicos.sh, Kafka UI, productor, Kafka Streams y casos.
+#
+#   cd app && mvn -B package && cd ..
+#   docker compose -f local/docker-compose.local.yaml up -d --build
+#   docker compose -f local/docker-compose.local.yaml run --rm casos todos
+#   docker compose -f local/docker-compose.local.yaml down -v
+name: ep5-local
+
+x-broker: &broker
+  image: confluentinc/cp-kafka:7.7.1
+  restart: unless-stopped
+  depends_on: [zookeeper]
+  healthcheck:
+    test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9092'"]
+    interval: 5s
+    timeout: 5s
+    retries: 30
+
+x-broker-env: &broker-env
+  KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNO:PLAINTEXT,EXTERNO:PLAINTEXT
+  KAFKA_INTER_BROKER_LISTENER_NAME: INTERNO
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+  KAFKA_MIN_INSYNC_REPLICAS: 1
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  KAFKA_UNCLEAN_LEADER_ELECTION_ENABLE: "false"
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+  KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+  KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+
+x-app: &app
+  image: ventas-app:local
+  build: ../app
+  restart: unless-stopped
+  depends_on:
+    topicos:
+      condition: service_completed_successfully
+  environment: &app-env
+    KAFKA_BOOTSTRAP_SERVERS: kafka-1:9092,kafka-2:9092
+    VENTANA_SEGUNDOS: 60
+    GRACIA_SEGUNDOS: 30
+    DEDUP_RETENCION_SEGUNDOS: 600
+    FUTURO_MAX_SEGUNDOS: 300
+    REPLICATION_FACTOR: 2
+    VENTAS_POR_SEGUNDO: 2
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.1
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      KAFKA_HEAP_OPTS: "-Xms128m -Xmx256m"
+
+  kafka-1:
+    <<: *broker
+    container_name: kafka-1
+    ports: ["19092:19092"]
+    environment:
+      <<: *broker-env
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENERS: INTERNO://0.0.0.0:9092,EXTERNO://0.0.0.0:19092
+      KAFKA_ADVERTISED_LISTENERS: INTERNO://kafka-1:9092,EXTERNO://localhost:19092
+
+  kafka-2:
+    <<: *broker
+    container_name: kafka-2
+    ports: ["29092:29092"]
+    environment:
+      <<: *broker-env
+      KAFKA_BROKER_ID: 2
+      KAFKA_LISTENERS: INTERNO://0.0.0.0:9092,EXTERNO://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: INTERNO://kafka-2:9092,EXTERNO://localhost:29092
+
+  # Crea los topics con el mismo script que en AWS y termina
+  topicos:
+    image: confluentinc/cp-kafka:7.7.1
+    depends_on:
+      kafka-1: {condition: service_healthy}
+      kafka-2: {condition: service_healthy}
+    environment:
+      BOOTSTRAP: kafka-1:9092,kafka-2:9092
+    volumes:
+      - ../scripts:/scripts:ro
+    entrypoint: ["bash", "-c", "sleep 5 && bash /scripts/topicos.sh crear && bash /scripts/topicos.sh describir"]
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    ports: ["8080:8080"]
+    depends_on: [kafka-1, kafka-2]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: ep5-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-1:9092,kafka-2:9092
+
+  producer:
+    <<: *app
+    command: ["producer"]
+
+  streams:
+    <<: *app
+    command: ["streams"]
+
+  api-usuarios:
+    build: ../deploy/app/api-usuarios
+    image: api-usuarios:local
+    restart: unless-stopped
+    ports: ["8081:8081"]
+
+  casos:
+    <<: *app
+    restart: "no"
+    profiles: ["herramientas"]
+    command: ["casos", "lista"]

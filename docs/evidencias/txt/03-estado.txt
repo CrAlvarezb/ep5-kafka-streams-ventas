@@ -1,0 +1,40 @@
+$ ./verificar.sh estado
+
+==== kafka-1 ====
+BOOTSTRAP OK 2026-11-22T17:28:16Z
+NAMES           STATUS
+kafka           Up 5 minutes (healthy)
+zookeeper       Up 5 minutes (healthy)
+grafana-alloy   Up 5 minutes
+
+
+==== kafka-2 ====
+BOOTSTRAP OK 2026-11-22T17:24:54Z
+NAMES                       STATUS
+kafka                       Up 4 minutes (healthy)
+grafana-alloy               Up 4 minutes
+lector-ventas-descartadas   Up 4 minutes
+lector-ventas-dlq           Up 4 minutes
+lector-ventas-agregadas     Up 4 minutes
+lector-ventas-raw           Up 4 minutes
+
+
+==== app ====
+BOOTSTRAP OK 2026-11-22T17:24:49Z
+NAMES                   STATUS
+ventas-app-producer-1   Up About a minute
+api-usuarios            Up About a minute (healthy)
+ventas-app-streams-1    Up About a minute
+grafana-alloy           Up 8 minutes
+
+
+==== monitoring ====
+BOOTSTRAP OK 2026-11-22T17:25:08Z
+NAMES            STATUS
+prometheus       Up 8 minutes
+loki             Up 8 minutes
+kafka-exporter   Up 5 minutes
+grafana-alloy    Up 8 minutes
+grafana          Up 8 minutes
+kafka-ui         Up 8 minutes
+

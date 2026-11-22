@@ -1,0 +1,27 @@
+$ ./verificar.sh api
+
+==== API de usuarios en la EC2 app: http://3.86.243.96:8081 ====
+--- GET /api/saludo
+{"mensaje":"Hola desde el Backend"}
+
+--- GET /health
+{"estado":"ok","usuarios":3}
+
+--- GET /api/usuarios
+[{"email":"ana@ejemplo.com","id":1,"nombre":"Ana Garc\u00eda"},{"email":"carlos@ejemplo.com","id":2,"nombre":"Carlos L\u00f3pez"},{"email":"maria@ejemplo.com","id":3,"nombre":"Mar\u00eda Rodr\u00edguez"}]
+
+--- POST /api/usuarios
+{"email":"prueba@ejemplo.com","id":5,"nombre":"Usuario Prueba"}
+
+--- PUT /api/usuarios/4
+{"error":"Usuario no encontrado"}
+
+--- GET /api/usuarios/4
+{"error":"Usuario no encontrado"}
+
+--- DELETE /api/usuarios/4
+{"error":"Usuario no encontrado"}
+
+--- GET /api/usuarios/99 (404)
+{"error":"Usuario no encontrado"}
+ HTTP 404

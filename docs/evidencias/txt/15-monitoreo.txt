@@ -1,0 +1,43 @@
+$ ./verificar.sh monitoreo
+== Targets de Prometheus
+kafka           kafka-1                up
+kafka           kafka-2                up
+kafka-exporter  kafka-exporter:9308    up
+producer        producer               up
+prometheus      localhost:9090         up
+streams         10.20.2.20:9407        up
+streams         10.20.2.20:9408        down
+zookeeper       zookeeper              up
+
+== Grafana
+{
+  "database": "ok",
+  "version": "11.4.0",
+  "commit": "b58701869e1a11b696010a6f28bd96b68a2cf0d0"
+}
+
+== Loki: hosts que envian logs
+{"status":"success","data":["app","kafka-1","kafka-2","monitoring"]}
+
+
+== Metricas clave (Prometheus)
+brokers activos                                    2
+particiones sub-replicadas                         0
+lag ventas-aggregator                              13
+ventas/s en ventas-raw                             2.003508771929824
+
+== Conteo de la ultima hora por motivo (logs de Kafka Streams en Loki)
+   CAMPO_INVALIDO               2
+   JSON_MALFORMADO              1
+   REGLA_NEGOCIO                2
+   DUPLICADO                    2
+   TARDIO_FUERA_DE_GRACIA       1
+   TARDIO_EN_GRACIA (aceptados):
+   total                        1
+
+
+==== Accesos (la IP publica cambia al apagar/encender; usuario admin) ====
+Grafana     http://54.82.81.89:3000   clave: terraform -chdir=infra output -raw grafana_password
+Kafka UI    http://54.82.81.89:8080   clave: terraform -chdir=infra output -raw kafka_ui_password
+Prometheus  http://54.82.81.89:9090
+API usuarios http://3.86.243.96:8081/api/usuarios
